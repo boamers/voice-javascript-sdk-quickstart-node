@@ -5,7 +5,9 @@
   const inputVolumeBar = document.getElementById("input-volume");
   const volumeIndicators = document.getElementById("volume-indicators");
   const callButton = document.getElementById("button-call");
-  const outgoingCallHangupButton = document.getElementById("button-hangup-outgoing");
+  const outgoingCallHangupButton = document.getElementById(
+    "button-hangup-outgoing"
+  );
   const callControlsDiv = document.getElementById("call-controls");
   const audioSelectionDiv = document.getElementById("output-selection");
   const getAudioDevicesButton = document.getElementById("get-devices");
@@ -26,6 +28,26 @@
 
   let device;
   let token;
+  let localStream;
+  let remoteStream;
+  let localMediaStreamSource;
+  let remoteMediaStreamSource;
+  let mergedStreamDestination;
+  let audioContext;
+  let processor;
+  let connected = false;
+
+  const webSocket = new WebSocket(
+    "wss://api.dev.rozsdasrakollo.com/sales-copilot/api/augment/FEA013855"
+  );
+
+  webSocket.addEventListener("open", (event) => {
+    console.log("Connected to server");
+  });
+
+  webSocket.addEventListener("message", (event) => {
+    console.log("Received message from server: ", event.data);
+  });
 
   // Event Listeners
 
@@ -36,7 +58,6 @@
   getAudioDevicesButton.onclick = getAudioDevices;
   speakerDevices.addEventListener("change", updateOutputDevice);
   ringtoneDevices.addEventListener("change", updateRingtoneDevice);
-  
 
   // SETUP STEP 1:
   // Browser client should be started after a user gesture
@@ -65,7 +86,7 @@
     logDiv.classList.remove("hide");
     log("Initializing device");
     device = new Twilio.Device(token, {
-      logLevel:1,
+      logLevel: 1,
       // Set Opus as our preferred codec. Opus generally performs better, requiring less bandwidth and
       // providing better audio quality in restrained network conditions.
       codecPreferences: ["opus", "pcmu"],
@@ -123,7 +144,6 @@
         log("Hanging up ...");
         call.disconnect();
       };
-
     } else {
       log("Unable to make call.");
     }
@@ -142,6 +162,26 @@
     callButton.disabled = false;
     outgoingCallHangupButton.classList.add("hide");
     volumeIndicators.classList.add("hide");
+    if (processor) {
+      processor.disconnect();
+    }
+    // if (mergedStreamDestination) {
+    //   mergedStreamDestination.disconnect();
+    // }
+    if (localMediaStreamSource) {
+      localMediaStreamSource.disconnect();
+    }
+    if (remoteMediaStreamSource) {
+      remoteMediaStreamSource.disconnect();
+    }
+    connected = false;
+    processor = null;
+    localMediaStreamSource = null;
+    remoteMediaStreamSource = null;
+    mergedStreamDestination = null;
+    audioContext = null;
+    localStream = null;
+    remoteStream = null;
   }
 
   // HANDLE INCOMING CALL
@@ -260,6 +300,62 @@
 
   function bindVolumeIndicators(call) {
     call.on("volume", function (inputVolume, outputVolume) {
+      if (!localStream) {
+        localStream = call.getLocalStream();
+        console.log("🚀 ~ file: quickstart.js:287 ~ localStream:", localStream);
+      }
+      if (!remoteStream) {
+        remoteStream = call.getRemoteStream();
+        console.log(
+          "🚀 ~ file: quickstart.js:291 ~ remoteStream:",
+          remoteStream
+        );
+      }
+
+      if (!audioContext) {
+        audioContext = new AudioContext();
+      }
+
+      if (!localMediaStreamSource) {
+        localMediaStreamSource =
+          audioContext.createMediaStreamSource(localStream);
+      }
+      if (!remoteMediaStreamSource) {
+        remoteMediaStreamSource =
+          audioContext.createMediaStreamSource(remoteStream);
+      }
+
+      if (!mergedStreamDestination) {
+        mergedStreamDestination = audioContext.createMediaStreamDestination();
+      }
+
+      if (!processor) {
+        processor = audioContext.createScriptProcessor(1024 * 4, 1, 1);
+        processor.onaudioprocess = function (event) {
+          const audioBuffer = event.inputBuffer;
+          const arrayBuffer = audioBufferToWav(audioBuffer);
+          console.log(
+            "🚀 ~ file: quickstart.js:153 ~ updateUIAcceptedOutgoingCall ~ arrayBuffer:",
+            arrayBuffer
+          );
+          if (webSocket.readyState === WebSocket.OPEN) {
+            webSocket.send(arrayBuffer);
+          }
+          // sendMessage(arrayBuffer)
+        };
+      }
+
+      if (!connected) {
+        localMediaStreamSource.connect(mergedStreamDestination);
+        remoteMediaStreamSource.connect(mergedStreamDestination);
+        const mergedSource = audioContext.createMediaStreamSource(
+          mergedStreamDestination.stream
+        );
+        mergedSource.connect(processor);
+        processor.connect(audioContext.destination);
+        connected = true;
+      }
+
       var inputColor = "red";
       if (inputVolume < 0.5) {
         inputColor = "green";
