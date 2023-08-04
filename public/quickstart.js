@@ -25,6 +25,7 @@
   const phoneNumberInput = document.getElementById("phone-number");
   const incomingPhoneNumberEl = document.getElementById("incoming-number");
   const startupButton = document.getElementById("startup-button");
+  const ringFeedbackAudio = document.getElementById("ring-feedback-audio");
 
   let device;
   let token;
@@ -139,6 +140,7 @@
       call.on("accept", updateUIAcceptedOutgoingCall);
       call.on("disconnect", updateUIDisconnectedOutgoingCall);
       call.on("cancel", updateUIDisconnectedOutgoingCall);
+      call.on("ringing", updateUIRingingOutgoingCall);
 
       outgoingCallHangupButton.onclick = () => {
         log("Hanging up ...");
@@ -149,8 +151,19 @@
     }
   }
 
+  function updateUIRingingOutgoingCall() {
+    log("Call is ringing ...");
+    ringFeedbackAudio.play();
+  }
+
+  function stopRingFeedbackAudio() {
+    ringFeedbackAudio.pause();
+    ringFeedbackAudio.currentTime = 0;
+  }
+
   function updateUIAcceptedOutgoingCall(call) {
     log("Call in progress ...");
+    stopRingFeedbackAudio();
     callButton.disabled = true;
     outgoingCallHangupButton.classList.remove("hide");
     volumeIndicators.classList.remove("hide");
@@ -159,6 +172,7 @@
 
   function updateUIDisconnectedOutgoingCall() {
     log("Call disconnected.");
+    stopRingFeedbackAudio();
     callButton.disabled = false;
     outgoingCallHangupButton.classList.add("hide");
     volumeIndicators.classList.add("hide");
@@ -332,15 +346,15 @@
       if (!processor) {
         processor = audioContext.createScriptProcessor(1024 * 4, 1, 1);
         processor.onaudioprocess = function (event) {
-          const audioBuffer = event.inputBuffer;
-          const arrayBuffer = audioBufferToWav(audioBuffer);
-          console.log(
-            "🚀 ~ file: quickstart.js:153 ~ updateUIAcceptedOutgoingCall ~ arrayBuffer:",
-            arrayBuffer
-          );
-          if (webSocket.readyState === WebSocket.OPEN) {
-            webSocket.send(arrayBuffer);
-          }
+          // const audioBuffer = event.inputBuffer;
+          // const arrayBuffer = audioBufferToWav(audioBuffer);
+          // console.log(
+          //   "🚀 ~ file: quickstart.js:153 ~ updateUIAcceptedOutgoingCall ~ arrayBuffer:",
+          //   arrayBuffer
+          // );
+          // if (webSocket.readyState === WebSocket.OPEN) {
+          //   webSocket.send(arrayBuffer);
+          // }
           // sendMessage(arrayBuffer)
         };
       }
