@@ -85,6 +85,7 @@
   // Instantiate a new Twilio.Device
   function intitializeDevice() {
     logDiv.classList.remove("hide");
+    ringFeedbackAudio.src = "https://demo.twilio.com/docs/classic.mp3";
     log("Initializing device");
     device = new Twilio.Device(token, {
       logLevel: 1,
