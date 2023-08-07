@@ -347,16 +347,13 @@
       if (!processor) {
         processor = audioContext.createScriptProcessor(1024 * 4, 1, 1);
         processor.onaudioprocess = function (event) {
-          // const audioBuffer = event.inputBuffer;
-          // const arrayBuffer = audioBufferToWav(audioBuffer);
-          // console.log(
-          //   "🚀 ~ file: quickstart.js:153 ~ updateUIAcceptedOutgoingCall ~ arrayBuffer:",
-          //   arrayBuffer
-          // );
-          // if (webSocket.readyState === WebSocket.OPEN) {
-          //   webSocket.send(arrayBuffer);
-          // }
-          // sendMessage(arrayBuffer)
+          const audioBuffer = event.inputBuffer;
+          const arrayBuffer = audioBufferToWav(audioBuffer);
+
+          if (webSocket.readyState === WebSocket.OPEN) {
+            webSocket.send(arrayBuffer);
+          }
+          sendMessage(arrayBuffer);
         };
       }
 
