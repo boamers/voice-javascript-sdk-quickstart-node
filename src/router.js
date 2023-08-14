@@ -4,7 +4,9 @@ const { tokenGenerator, voiceResponse } = require("./handler");
 const router = new Router();
 
 router.get("/token", (req, res) => {
-  res.send(tokenGenerator());
+  const token = tokenGenerator();
+  console.log("🚀 ~ file: router.js:8 ~ router.get ~ token:", token);
+  res.send(token);
 });
 
 router.post("/voice", (req, res) => {

@@ -120,6 +120,10 @@
     if (device.audio.isOutputSelectionSupported) {
       audioSelectionDiv.classList.remove("hide");
     }
+
+    device.on("tokenWillExpire", () => {
+      log("Token will expire soon.");
+    });
   }
 
   // MAKE AN OUTGOING CALL
