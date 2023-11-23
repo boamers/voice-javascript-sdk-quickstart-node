@@ -34,30 +34,47 @@ exports.voiceResponse = function voiceResponse(requestBody) {
   const callerId = config.callerId;
   let twiml = new VoiceResponse();
 
-  // If the request to the /voice endpoint is TO your Twilio Number, 
+  // If the request to the /voice endpoint is TO your Twilio Number,
   // then it is an incoming call towards your Twilio.Device.
   if (toNumberOrClientName == callerId) {
     let dial = twiml.dial();
 
-    // This will connect the caller with your Twilio.Device/client 
+    // This will connect the caller with your Twilio.Device/client
     dial.client(identity);
-
   } else if (requestBody.To) {
     // This is an outgoing call
 
     // set the callerId
-    let dial = twiml.dial({ callerId });
+    let dial = twiml.dial({
+      callerId,
+      answerOnBridge: true,
+      record: "record-from-answer-dual",
+    });
 
     // Check if the 'To' parameter is a Phone Number or Client Name
-    // in order to use the appropriate TwiML noun 
+    // in order to use the appropriate TwiML noun
     const attr = isAValidPhoneNumber(toNumberOrClientName)
       ? "number"
       : "client";
-    dial[attr]({}, toNumberOrClientName);
+
+    const options = {
+      url: "/disclaimer",
+      method: "GET",
+      statusCallback: "/status",
+      statusCallbackEvent: ["initiated", "completed"],
+    };
+
+    dial[attr](options, toNumberOrClientName);
   } else {
     twiml.say("Thanks for calling!");
   }
 
+  return twiml.toString();
+};
+
+exports.disclaimerResponse = function disclaimerResponse(requestBody) {
+  let twiml = new VoiceResponse();
+  twiml.say("This call is being recorded.");
   return twiml.toString();
 };
 
