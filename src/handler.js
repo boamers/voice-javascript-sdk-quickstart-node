@@ -62,7 +62,7 @@ exports.voiceResponse = function voiceResponse(requestBody) {
   return twiml.toString();
 };
 
-exports.conference = function conference(requestBody) {
+exports.conference = async function conference(requestBody) {
   const toNumberOrClientName = requestBody.To;
   const callerId = config.callerId;
   let webClientResponse = new VoiceResponse();
@@ -81,51 +81,81 @@ exports.conference = function conference(requestBody) {
 
     const CONF_FRIENDLY_NAME = "My conference";
 
-    let dial = webClientResponse.dial();
-    dial.conference(CONF_FRIENDLY_NAME, {
-      startConferenceOnEnter: true,
-      endConferenceOnExit: true,
-      record: "record-from-start",
-      participantLabel: "sc-client",
-    });
+    // cellTwiml = cellResponse.dial().conference(CONF_FRIENDLY_NAME, {
+    //   startConferenceOnEnter: false,
+    //   endConferenceOnExit: true,
+    //   participantLabel: "sc-cell",
+    // });
 
-    cellTwiml = cellResponse.dial().conference(CONF_FRIENDLY_NAME, {
-      startConferenceOnEnter: true,
-      endConferenceOnExit: true,
-      participantLabel: "sc-cell",
-    });
-
-    calleeTwiml = calleeResponse.dial().conference(CONF_FRIENDLY_NAME, {
-      startConferenceOnEnter: false,
-      endConferenceOnExit: true,
-      participantLabel: "sc-callee",
-    });
+    calleeTwiml = calleeResponse
+      .dial({
+        record: "record-from-answer-dual",
+      })
+      .conference(CONF_FRIENDLY_NAME, {
+        startConferenceOnEnter: true,
+        endConferenceOnExit: true,
+        participantLabel: "sc-callee",
+        statusCallback:
+          "https://d64b-89-132-79-78.ngrok-free.app/conference-status",
+        statusCallbackEvent: ["leave", "join"],
+      });
 
     // Add cell phone to conference
-    client.calls
-      .create({
-        twiml: cellTwiml.toString(),
-        to: "+36709425886",
-        from: "+14086135720",
-      })
-      .then((call) => console.log(call.sid));
+    // client.calls
+    //   .create({
+    //     twiml: cellTwiml.toString(),
+    //     to: "+36709425886",
+    //     from: "+14086135720",
+    //   })
+    //   .then((call) => console.log(call.sid));
 
     // Add callee to conference
-    client.calls
-      .create({
-        twiml: calleeTwiml.toString(),
-        to: isAValidPhoneNumber(toNumberOrClientName)
-          ? toNumberOrClientName
-          : `client:${toNumberOrClientName}`,
-        from: "+14086135720",
-      })
-      .then((call) => console.log(call.sid))
-      .catch((err) => console.log(err));
+    const call = await client.calls.create({
+      twiml: calleeTwiml.toString(),
+      to: isAValidPhoneNumber(toNumberOrClientName)
+        ? toNumberOrClientName
+        : `client:${toNumberOrClientName}`,
+      from: "+14086135720",
+      statusCallback: "https://d64b-89-132-79-78.ngrok-free.app/status",
+      statusCallbackEvent: ["initiated", "completed"],
+    });
+    console.log(call.sid);
+
+    let dial = webClientResponse.dial();
+    dial.conference(CONF_FRIENDLY_NAME, {
+      startConferenceOnEnter: false,
+      endConferenceOnExit: true,
+      participantLabel: "sc-client",
+      statusCallback: `https://d64b-89-132-79-78.ngrok-free.app/conference-status?calleeCallSid=${call.sid}`,
+      statusCallbackEvent: ["leave", "join"],
+    });
+
+    return webClientResponse.toString();
   } else {
     webClientResponse.say("Thanks for calling!");
   }
 
   return webClientResponse.toString();
+};
+
+exports.conferenceStatus = function conferenceStatus(requestBody, query) {
+  const { StatusCallbackEvent } = requestBody;
+  const { calleeCallSid } = query;
+
+  // Lucky for us if anyone leaves the conference, we can just hangup the call
+  if (StatusCallbackEvent === "participant-leave") {
+    client
+      .calls(calleeCallSid)
+      .update({
+        status: "completed",
+      })
+      .then(() => {
+        console.log(`${calleeCallSid} hangup`);
+      })
+      .catch(() => {
+        console.log(`${calleeCallSid} hangup failed`);
+      });
+  }
 };
 
 /**
