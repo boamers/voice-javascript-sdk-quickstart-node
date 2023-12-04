@@ -111,7 +111,6 @@ exports.conference = async function conference(requestBody) {
       const calleeTwiml = new VoiceResponse()
         .dial({
           callerId,
-          record: "record-from-answer-dual",
         })
         .conference(
           {
@@ -132,6 +131,8 @@ exports.conference = async function conference(requestBody) {
         from: callerId,
         statusCallback: `${BASE_URL}/status`,
         statusCallbackEvent: ["initiated", "completed"],
+        record: true,
+        recordingChannels: "dual",
       });
     }
 
@@ -184,6 +185,7 @@ exports.conferenceStatus = async function conferenceStatus(requestBody, query) {
     requestBody;
   const { calleeCallSid } = query;
 
+  // If the callee joins the conference, we send a message to the caller
   if (
     StatusCallbackEvent === "participant-join" &&
     ParticipantLabel === CALLEE_LABEL
@@ -199,10 +201,6 @@ exports.conferenceStatus = async function conferenceStatus(requestBody, query) {
     if (!webClientParticipant) {
       throw new Error("sc-client participant not found in conference");
     }
-    console.log(
-      "🚀 ~ file: handler.js:199 ~ conferenceStatus ~ webClientParticipant:",
-      webClientParticipant.callSid
-    );
     const sentMessage = await client
       .calls(webClientParticipant.callSid)
       .userDefinedMessages.create({
@@ -214,21 +212,17 @@ exports.conferenceStatus = async function conferenceStatus(requestBody, query) {
       "🚀 ~ file: handler.js:190 ~ sentMessage ~ sentMessage:",
       sentMessage
     );
+
+    return;
   }
 
   // Lucky for us if anyone leaves the conference, we can just hangup the call
-  if (StatusCallbackEvent === "participant-leave") {
-    client
-      .calls(calleeCallSid)
-      .update({
-        status: "completed",
-      })
-      .then(() => {
-        console.log(`${calleeCallSid} hangup`);
-      })
-      .catch(() => {
-        console.log(`${calleeCallSid} hangup failed`);
-      });
+  if (StatusCallbackEvent === "participant-leave" && calleeCallSid) {
+    await client.calls(calleeCallSid).update({
+      status: "completed",
+    });
+    console.log(`${calleeCallSid} hangup`);
+    return;
   }
 };
 

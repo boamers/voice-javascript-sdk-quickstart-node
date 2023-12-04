@@ -41,8 +41,14 @@ router.post("/status", (req, res) => {
 
 router.post("/conference-status", (req, res) => {
   console.log("/conference-status", req.body);
-  conferenceStatus(req.body, req.query);
-  res.status(200).end();
+  conferenceStatus(req.body, req.query)
+    .then(() => {
+      res.status(200).end();
+    })
+    .catch((error) => {
+      console.error(error);
+      return res.status(500).end();
+    });
 });
 
 module.exports = router;
