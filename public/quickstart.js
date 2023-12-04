@@ -5,7 +5,9 @@
   const inputVolumeBar = document.getElementById("input-volume");
   const volumeIndicators = document.getElementById("volume-indicators");
   const callButton = document.getElementById("button-call");
-  const outgoingCallHangupButton = document.getElementById("button-hangup-outgoing");
+  const outgoingCallHangupButton = document.getElementById(
+    "button-hangup-outgoing"
+  );
   const callControlsDiv = document.getElementById("call-controls");
   const audioSelectionDiv = document.getElementById("output-selection");
   const getAudioDevicesButton = document.getElementById("get-devices");
@@ -36,7 +38,6 @@
   getAudioDevicesButton.onclick = getAudioDevices;
   speakerDevices.addEventListener("change", updateOutputDevice);
   ringtoneDevices.addEventListener("change", updateRingtoneDevice);
-  
 
   // SETUP STEP 1:
   // Browser client should be started after a user gesture
@@ -65,7 +66,7 @@
     logDiv.classList.remove("hide");
     log("Initializing device");
     device = new Twilio.Device(token, {
-      logLevel:1,
+      logLevel: 1,
       // Set Opus as our preferred codec. Opus generally performs better, requiring less bandwidth and
       // providing better audio quality in restrained network conditions.
       codecPreferences: ["opus", "pcmu"],
@@ -118,12 +119,14 @@
       call.on("accept", updateUIAcceptedOutgoingCall);
       call.on("disconnect", updateUIDisconnectedOutgoingCall);
       call.on("cancel", updateUIDisconnectedOutgoingCall);
+      call.on("messageReceived", (message) => {
+        log(JSON.stringify(message.content));
+      });
 
       outgoingCallHangupButton.onclick = () => {
         log("Hanging up ...");
         call.disconnect();
       };
-
     } else {
       log("Unable to make call.");
     }
