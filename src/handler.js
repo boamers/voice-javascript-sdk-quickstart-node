@@ -68,14 +68,14 @@ const CALLER_LABEL = "sc-client";
 const CALLER_CELL_LABEL = "sc-cell";
 const CALLEE_LABEL = "sc-callee";
 const BASE_URL =
-  "https://cf1d-2001-4c4c-152b-1700-881f-7524-65ed-bef7.ngrok-free.app";
+  "https://98b2-2001-4c4c-152b-1700-c852-4f43-2c13-44ab.ngrok-free.app";
 
 exports.conference = async function conference(requestBody) {
   const toNumberOrClientName = requestBody.To;
   const callerId = config.callerId;
 
   // TODO: Should be coming (or be derived from) from the request body
-  const conferenceName = "My conference";
+  const conferenceName = requestBody.ConferenceName;
   const shouldUseCell = false;
   const callerCellNumber = "+36709425886";
 
@@ -129,7 +129,7 @@ exports.conference = async function conference(requestBody) {
           ? toNumberOrClientName
           : `client:${toNumberOrClientName}`,
         from: callerId,
-        statusCallback: `${BASE_URL}/status`,
+        statusCallback: `${BASE_URL}/status?conferenceName=${conferenceName}`,
         statusCallbackEvent: ["initiated", "completed"],
         record: true,
         recordingChannels: "dual",

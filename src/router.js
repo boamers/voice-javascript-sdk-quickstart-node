@@ -35,7 +35,7 @@ router.post("/conference", (req, res) => {
 });
 
 router.post("/status", (req, res) => {
-  console.log("/status", req.body);
+  console.log("/status", req.body, req.query);
   res.status(200).end();
 });
 

@@ -106,6 +106,7 @@
     var params = {
       // get the phone number to call from the DOM
       To: phoneNumberInput.value,
+      ConferenceName: "SomeUUIDGeneratedOnClientSide",
     };
 
     if (device) {
@@ -113,6 +114,10 @@
 
       // Twilio.Device.connect() returns a Call object
       const call = await device.connect({ params });
+      console.log(
+        "🚀 ~ file: quickstart.js:117 ~ makeOutgoingCall ~ call:",
+        call
+      );
 
       // add listeners to the Call
       // "accepted" means the call has finished connecting and the state is now "open"
